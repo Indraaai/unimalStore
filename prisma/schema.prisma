@@ -1,13 +1,169 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  SELLER
+  ADMIN
+}
+
+enum ProductStatus {
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  AWAITING_VERIFICATION
+  APPROVED
+  REJECTED
+}
+
+enum PlanType {
+  MEMBERSHIP
+  FEATURED_AD
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(SELLER)
+  isBlocked    Boolean  @default(false)
+
+  sellerProfile SellerProfile?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SellerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storeName   String
+  storeSlug   String  @unique
+  whatsapp    String
+  description String?
+  logoUrl     String?
+
+  membership Membership?
+  products   Product[]
+  payments   PaymentSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id       String        @id @default(cuid())
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  title       String
+  slug        String   @unique
+  description String
+  price       Int?
+  imageUrls   String[]
+
+  status        ProductStatus @default(PUBLISHED)
+  isFeatured    Boolean       @default(false)
+  featuredUntil DateTime?
+
+  views          Int @default(0)
+  whatsappClicks Int @default(0)
+
+  leads Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([title])
+  @@index([isFeatured])
+  @@index([status])
+  @@index([categoryId])
+}
+
+model Lead {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+}
+
+model Membership {
+  id       String        @id @default(cuid())
+  sellerId String        @unique
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  planName    String
+  maxProducts Int      @default(3)
+  startsAt    DateTime
+  endsAt      DateTime
+  isActive    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plan {
+  id           String   @id @default(cuid())
+  name         String
+  type         PlanType
+  price        Int
+  durationDays Int
+  productLimit Int?
+  description  String?
+
+  isActive Boolean @default(true)
+
+  payments PaymentSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PaymentSubmission {
+  id String @id @default(cuid())
+
+  sellerId String
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  productId String?
+  proofUrl  String
+
+  amount Int
+  status PaymentStatus @default(AWAITING_VERIFICATION)
+
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
