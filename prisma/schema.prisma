@@ -6,36 +6,56 @@ datasource db {
   provider = "postgresql"
 }
 
-enum UserRole {
+enum Role {
   SELLER
   ADMIN
 }
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SellerStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
 enum ProductStatus {
+  DRAFT
   PENDING
   PUBLISHED
   REJECTED
   ARCHIVED
 }
 
+enum ProductType {
+  PRODUCT
+  SERVICE
+}
+
+enum PaymentType {
+  MEMBERSHIP
+  FEATURED_ADS
+}
+
 enum PaymentStatus {
+  PENDING
   AWAITING_VERIFICATION
   APPROVED
   REJECTED
-}
-
-enum PlanType {
-  MEMBERSHIP
-  FEATURED_AD
+  EXPIRED
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(SELLER)
-  isBlocked    Boolean  @default(false)
+  id       String     @id @default(cuid())
+  name     String
+  email    String     @unique
+  password String
+  role     Role       @default(SELLER)
+  status   UserStatus @default(ACTIVE)
 
   sellerProfile SellerProfile?
 
@@ -44,28 +64,31 @@ model User {
 }
 
 model SellerProfile {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String       @id @default(cuid())
+  userId         String       @unique
+  storeName      String
+  storeSlug      String       @unique
+  whatsappNumber String
+  description    String?
+  logoUrl        String?
+  status         SellerStatus @default(PENDING_VERIFICATION)
 
-  storeName   String
-  storeSlug   String  @unique
-  whatsapp    String
-  description String?
-  logoUrl     String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  membership Membership?
-  products   Product[]
-  payments   PaymentSubmission[]
+  products Product[]
+  payments Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Category {
-  id       String    @id @default(cuid())
-  name     String
-  slug     String    @unique
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  isActive    Boolean @default(true)
+
   products Product[]
 
   createdAt DateTime @default(now())
@@ -73,96 +96,105 @@ model Category {
 }
 
 model Product {
-  id       String        @id @default(cuid())
-  sellerId String
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-
+  id         String @id @default(cuid())
+  sellerId   String
   categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
 
   title       String
-  slug        String   @unique
+  slug        String        @unique
   description String
-  price       Int?
-  imageUrls   String[]
+  price       Int
+  type        ProductType   @default(PRODUCT)
+  status      ProductStatus @default(PENDING)
 
-  status        ProductStatus @default(PUBLISHED)
-  isFeatured    Boolean       @default(false)
+  isFeatured    Boolean   @default(false)
   featuredUntil DateTime?
 
-  views          Int @default(0)
-  whatsappClicks Int @default(0)
+  viewsCount Int @default(0)
+  leadsCount Int @default(0)
 
-  leads Lead[]
+  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  category Category      @relation(fields: [categoryId], references: [id])
+
+  images ProductImage[]
+  leads  Lead[]
+  views  ProductView[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
 
-  @@index([title])
-  @@index([isFeatured])
-  @@index([status])
-  @@index([categoryId])
+model ProductImage {
+  id        String @id @default(cuid())
+  productId String
+  imageUrl  String
+  sortOrder Int    @default(0)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 model Lead {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sellerId  String
+
+  ipAddress String?
+  userAgent String?
+  referrer  String?
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ProductView {
+  id        String @id @default(cuid())
+  productId String
+  sellerId  String
 
   ipAddress String?
   userAgent String?
 
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 }
 
-model Membership {
-  id       String        @id @default(cuid())
-  sellerId String        @unique
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+model MembershipPlan {
+  id                String  @id @default(cuid())
+  name              String
+  price             Int
+  durationDays      Int
+  productLimit      Int
+  canUseFeaturedAds Boolean @default(false)
+  description       String?
+  isActive          Boolean @default(true)
 
-  planName    String
-  maxProducts Int      @default(3)
-  startsAt    DateTime
-  endsAt      DateTime
-  isActive    Boolean  @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Plan {
-  id           String   @id @default(cuid())
-  name         String
-  type         PlanType
-  price        Int
-  durationDays Int
-  productLimit Int?
-  description  String?
-
-  isActive Boolean @default(true)
-
-  payments PaymentSubmission[]
+  payments Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model PaymentSubmission {
-  id String @id @default(cuid())
+model Payment {
+  id               String  @id @default(cuid())
+  sellerId         String
+  membershipPlanId String?
+  productId        String?
 
-  sellerId String
-  seller   SellerProfile @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  type          PaymentType
+  amount        Int
+  proofImageUrl String?
+  status        PaymentStatus @default(PENDING)
+  adminNote     String?
 
-  planId String
-  plan   Plan   @relation(fields: [planId], references: [id])
+  approvedAt DateTime?
+  rejectedAt DateTime?
 
-  productId String?
-  proofUrl  String
-
-  amount Int
-  status PaymentStatus @default(AWAITING_VERIFICATION)
-
-  adminNote String?
+  seller         SellerProfile   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  membershipPlan MembershipPlan? @relation(fields: [membershipPlanId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
