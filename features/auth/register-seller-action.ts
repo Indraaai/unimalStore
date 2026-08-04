@@ -14,7 +14,21 @@ function generateSlug(value: string) {
         .replace(/-+/g, "-");
 }
 
-export async function registerSellerAction(formData: FormData) {
+export type RegisterSellerState = {
+    success: boolean;
+    message: string;
+    error?: {
+        name?: string[];
+        email?: string[];
+        password?: string[];
+        storeName?: string[];
+        whatsappNumber?: string[];
+        description?: string[];
+    };
+}
+
+
+export async function registerSellerAction(prevState: RegisterSellerState, formData: FormData): Promise<RegisterSellerState> {
     const rawData = {
         name: formData.get("name"),
         email: formData.get("email"),
@@ -27,10 +41,12 @@ export async function registerSellerAction(formData: FormData) {
     const result = register.safeParse(rawData);
 
     if (!result.success) {
-        const firstError = result.error.issues[0]?.message || "Data tidak valid.";
-        throw new Error(firstError);
+        return {
+            success: false,
+            message: "Validasi gagal. Periksa kembali input Anda.",
+            error: result.error.flatten().fieldErrors,
+        };
     }
-
     const { name, email, password, storeName, whatsappNumber, description } =
         result.data;
 
@@ -41,7 +57,13 @@ export async function registerSellerAction(formData: FormData) {
     });
 
     if (existingUser) {
-        throw new Error("Email sudah digunakan.");
+        return {
+            success: false,
+            message: "Email sudah terdaftar. Silakan gunakan email lain.",
+            error: {
+                email: ["Email sudah terdaftar. Silakan gunakan email lain."],
+            },
+        }
     }
 
     const baseSlug = generateSlug(storeName);
@@ -77,5 +99,5 @@ export async function registerSellerAction(formData: FormData) {
         },
     });
 
-    redirect("/login");
+    redirect("/login?registered=success");
 }
