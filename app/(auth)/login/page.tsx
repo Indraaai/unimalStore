@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { signIn, getSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -98,6 +99,16 @@ export default function LoginPage() {
                 >
                     {isLoading ? "Memproses..." : "Login"}
                 </button>
+
+                <p className="text-center text-sm text-gray-500 pt-2">
+                    Belum punya akun?{" "}
+                    <Link
+                        href="/register"
+                        className="font-medium text-black hover:underline"
+                    >
+                        Daftar
+                    </Link>
+                </p>
             </form>
         </main>
     );
