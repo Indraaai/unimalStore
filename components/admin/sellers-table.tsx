@@ -35,7 +35,7 @@ import {
     suspendSeller,
     activateSeller,
 } from "@/features/admin/seller-actions";
-import { CheckCircle, XCircle, PauseCircle, PlayCircle, Eye } from "lucide-react";
+import { CheckCircle, XCircle, PauseCircle, PlayCircle, Eye, RotateCcw } from "lucide-react";
 
 type SellerWithUser = {
     id: string;
@@ -43,6 +43,7 @@ type SellerWithUser = {
     storeSlug: string;
     whatsappNumber: string;
     description: string | null;
+    rejectionReason?: string | null;
     status: "PENDING_VERIFICATION" | "ACTIVE" | "SUSPENDED" | "REJECTED";
     user: {
         id: string;
@@ -209,11 +210,21 @@ export function SellersTable({ sellers: initialSellers }: SellersTableProps) {
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => openActionDialog(seller, "activate")}
+                                                    title="Aktifkan Kembali"
                                                 >
                                                     <PlayCircle className="h-4 w-4 text-blue-600" />
                                                 </Button>
                                             )}
-                                            {/* REJECTED tidak ada aksi lanjutan */}
+                                            {seller.status === "REJECTED" && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => openActionDialog(seller, "activate")}
+                                                    title="Aktifkan Kembali"
+                                                >
+                                                    <RotateCcw className="h-4 w-4 text-blue-600" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -238,6 +249,9 @@ export function SellersTable({ sellers: initialSellers }: SellersTableProps) {
                             <p><strong>WhatsApp:</strong> {selectedSeller.whatsappNumber}</p>
                             <p><strong>Deskripsi:</strong> {selectedSeller.description || "-"}</p>
                             <p><strong>Status:</strong> {statusLabels[selectedSeller.status]}</p>
+                            {selectedSeller.status === "REJECTED" && selectedSeller.rejectionReason && (
+                                <p><strong>Alasan Penolakan:</strong> <span className="text-red-600">{selectedSeller.rejectionReason}</span></p>
+                            )}
                         </div>
                     )}
                 </DialogContent>

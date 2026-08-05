@@ -18,7 +18,10 @@ export async function approveSeller(formData: FormData) {
   // Update SellerProfile status menjadi ACTIVE
   await prisma.sellerProfile.update({
     where: { id: sellerId },
-    data: { status: "ACTIVE" },
+    data: {
+      status: "ACTIVE",
+      rejectionReason: null,
+    },
   });
 
   // Pastikan user status juga ACTIVE (jika sebelumnya SUSPENDED)
@@ -94,7 +97,10 @@ export async function activateSeller(formData: FormData) {
     });
     await prisma.sellerProfile.update({
       where: { id: sellerId },
-      data: { status: "ACTIVE" },
+      data: {
+        status: "ACTIVE",
+        rejectionReason: null,
+      },
     });
   }
 
