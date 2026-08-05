@@ -37,16 +37,16 @@ export async function approveSeller(formData: FormData) {
 }
 
 export async function rejectSeller(formData: FormData) {
-  const reasonRaw = formData.get("reason");
-  const { sellerId } = SellerActionSchema.parse({
+  const { sellerId, reason } = SellerActionSchema.parse({
     sellerId: formData.get("sellerId"),
-    reason: typeof reasonRaw === "string" && reasonRaw.trim() ? reasonRaw.trim() : undefined,
+    reason: formData.get("reason") || undefined,
   });
 
   await prisma.sellerProfile.update({
     where: { id: sellerId },
     data: {
       status: "REJECTED",
+      rejectionReason: reason, // simpan alasan
     },
   });
 
@@ -99,4 +99,4 @@ export async function activateSeller(formData: FormData) {
   }
 
   revalidatePath("/admin/sellers");
-}
+}

@@ -39,6 +39,10 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
+                if (user.status === "SUSPENDED") {
+                    throw new Error("Akun Anda ditangguhkan. Silakan hubungi admin.");
+                }
+
                 if (user.status !== "ACTIVE") {
                     return null;
                 }

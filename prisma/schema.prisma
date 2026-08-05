@@ -72,6 +72,7 @@ model SellerProfile {
   description    String?
   logoUrl        String?
   status         SellerStatus @default(PENDING_VERIFICATION)
+  rejectionReason String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
